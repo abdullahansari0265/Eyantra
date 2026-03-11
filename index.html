@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lohia Farm Weather Station</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="dashboard">
+        <header>
+            <h1>Lohia Farm Weather Station</h1>
+            <p class="last-updated">Last Updated: <span id="timestamp">Waiting for data...</span></p>
+        </header>
+
+        <section class="cards-grid">
+            <div class="card temp-card">
+                <h3>Temperature</h3>
+                <div class="value"><span id="val-temp">--</span> °C</div>
+            </div>
+            <div class="card hum-card">
+                <h3>Humidity</h3>
+                <div class="value"><span id="val-hum">--</span> %</div>
+            </div>
+            <div class="card press-card">
+                <h3>Pressure</h3>
+                <div class="value"><span id="val-press">--</span> hPa</div>
+            </div>
+            <div class="card lux-card">
+                <h3>Light (Lux)</h3>
+                <div class="value"><span id="val-lux">--</span> lx</div>
+            </div>
+            
+            <div class="card pm1-card">
+                <div class="card-header">
+                    <h3>PM 1.0</h3>
+                    <button class="toggle-btn" data-sensor="pm1">show ppm</button>
+                </div>
+                <div class="value"><span id="val-pm1">--</span> <span id="unit-pm1" class="unit">µg/m³</span></div>
+            </div>
+            <div class="card pm25-card">
+                <div class="card-header">
+                    <h3>PM 2.5</h3>
+                    <button class="toggle-btn" data-sensor="pm25">show ppm</button>
+                </div>
+                <div class="value"><span id="val-pm25">--</span> <span id="unit-pm25" class="unit">µg/m³</span></div>
+            </div>
+            <div class="card pm10-card">
+                <div class="card-header">
+                    <h3>PM 10</h3>
+                    <button class="toggle-btn" data-sensor="pm10">show ppm</button>
+                </div>
+                <div class="value"><span id="val-pm10">--</span> <span id="unit-pm10" class="unit">µg/m³</span></div>
+            </div>
+
+            <div class="card co2-card">
+                <h3>CO2</h3>
+                <div class="value"><span id="val-co2">--</span> ppm</div>
+            </div>
+        </section>
+
+        <section class="charts-grid">
+            <div class="chart-card">
+                <h3>Temperature Trend</h3>
+                <div class="canvas-container"><canvas id="tempChart"></canvas></div>
+            </div>
+            <div class="chart-card">
+                <h3>Humidity Trend</h3>
+                <div class="canvas-container"><canvas id="humChart"></canvas></div>
+            </div>
+            <div class="chart-card">
+                <h3>CO2 Trend</h3>
+                <div class="canvas-container"><canvas id="co2Chart"></canvas></div>
+            </div>
+            <div class="chart-card">
+                <h3>PM 2.5 Trend</h3>
+                <div class="canvas-container"><canvas id="pm25Chart"></canvas></div>
+            </div>
+        </section>
+    </div>
+
+    <script type="module" src="script.js"></script>
+</body>
+</html>
