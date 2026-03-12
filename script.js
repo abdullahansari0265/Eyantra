@@ -166,17 +166,30 @@ const initCharts = () => {
   pm25Chart = createChart(document.getElementById("pm25Chart"), "PM 2.5 (µg/m³)", "#ba68c8");
 };
 
+
+// updated code for light theme correction in graph
 const setupThemeToggle = () => {
   const themeBtn = document.getElementById("theme-toggle");
+
   themeBtn.addEventListener("click", () => {
     document.body.classList.toggle("light-theme");
     const isLight = document.body.classList.contains("light-theme");
+
     themeBtn.innerText = isLight ? "🌙 Dark" : "☀️ Light";
 
-    // Update charts for glassmorphism visibility
-    Chart.defaults.color = isLight ? "rgba(0, 0, 0, 0.6)" : "rgba(255, 255, 255, 0.7)";
-    Chart.defaults.borderColor = isLight ? "rgba(0, 0, 0, 0.1)" : "rgba(255, 255, 255, 0.1)";
-    [tempChart, humChart, co2Chart, pm25Chart].forEach(chart => chart.update());
+    const textColor = isLight ? "#1a237e" : "rgba(255,255,255,0.7)";
+    const gridColor = isLight ? "rgba(0,0,0,0.1)" : "rgba(255,255,255,0.1)";
+
+    [tempChart, humChart, co2Chart, pm25Chart].forEach(chart => {
+
+      chart.options.scales.x.ticks.color = textColor;
+      chart.options.scales.y.ticks.color = textColor;
+
+      chart.options.scales.x.grid.color = gridColor;
+      chart.options.scales.y.grid.color = gridColor;
+
+      chart.update();
+    });
   });
 };
 
