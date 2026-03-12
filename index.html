@@ -1,85 +1,188 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Lohia Farm Weather Station</title>
-    <link rel="stylesheet" href="style.css">
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="style.css" />
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-</head>
-<body>
+  </head>
+  <body>
+    <div class="bg-animation"></div>
+    <div class="farm-bg"></div>
+
     <div class="dashboard">
-        <header>
-            <h1>Lohia Farm Weather Station</h1>
-            <p class="last-updated">Last Updated: <span id="timestamp">Waiting for data...</span></p>
-        </header>
+      <header>
+        <div class="header-top">
+          <h1 data-i18n="title">Lohia Farm Weather Station</h1>
+          <div class="header-controls">
+            <select id="lang-toggle" class="control-btn glass-element" aria-label="Language selection">
+              <option value="en">English</option>
+              <option value="hi">हिंदी</option>
+              <option value="mr">मराठी</option>
+            </select>
+            <button id="theme-toggle" class="control-btn glass-element">☀️ Light</button>
+          </div>
+        </div>
+        <p class="last-updated">
+          <span data-i18n="lastUpdated">Last Updated:</span>
+          <span id="timestamp">Waiting for data...</span>
+        </p>
+      </header>
 
-        <section class="cards-grid">
-            <div class="card temp-card">
-                <h3>Temperature</h3>
-                <div class="value"><span id="val-temp">--</span> °C</div>
-            </div>
-            <div class="card hum-card">
-                <h3>Humidity</h3>
-                <div class="value"><span id="val-hum">--</span> %</div>
-            </div>
-            <div class="card press-card">
-                <h3>Pressure</h3>
-                <div class="value"><span id="val-press">--</span> hPa</div>
-            </div>
-            <div class="card lux-card">
-                <h3>Light (Lux)</h3>
-                <div class="value"><span id="val-lux">--</span> lx</div>
-            </div>
-            
-            <div class="card pm1-card">
-                <div class="card-header">
-                    <h3>PM 1.0</h3>
-                    <button class="toggle-btn" data-sensor="pm1">show ppm</button>
-                </div>
-                <div class="value"><span id="val-pm1">--</span> <span id="unit-pm1" class="unit">µg/m³</span></div>
-            </div>
-            <div class="card pm25-card">
-                <div class="card-header">
-                    <h3>PM 2.5</h3>
-                    <button class="toggle-btn" data-sensor="pm25">show ppm</button>
-                </div>
-                <div class="value"><span id="val-pm25">--</span> <span id="unit-pm25" class="unit">µg/m³</span></div>
-            </div>
-            <div class="card pm10-card">
-                <div class="card-header">
-                    <h3>PM 10</h3>
-                    <button class="toggle-btn" data-sensor="pm10">show ppm</button>
-                </div>
-                <div class="value"><span id="val-pm10">--</span> <span id="unit-pm10" class="unit">µg/m³</span></div>
-            </div>
+      <section class="cards-grid">
+        <div class="card glass-element temp-card">
+          <h3 data-i18n="temp">Temperature</h3>
+          <div class="value"><span id="val-temp">--</span> °C</div>
+          <div class="min-max">
+            <span class="min-val"
+              ><span data-i18n="min">Min</span>: <span id="val-min-temp">--</span>°C</span
+            >
+            |
+            <span class="max-val"
+              ><span data-i18n="max">Max</span>: <span id="val-max-temp">--</span>°C</span
+            >
+          </div>
+        </div>
 
-            <div class="card co2-card">
-                <h3>CO2</h3>
-                <div class="value"><span id="val-co2">--</span> ppm</div>
-            </div>
-        </section>
+        <div class="card glass-element hum-card">
+          <h3 data-i18n="hum">Humidity</h3>
+          <div class="value"><span id="val-hum">--</span> %</div>
+          <div class="min-max">
+            <span class="min-val"
+              ><span data-i18n="min">Min</span>: <span id="val-min-hum">--</span>%</span
+            >
+            |
+            <span class="max-val"
+              ><span data-i18n="max">Max</span>: <span id="val-max-hum">--</span>%</span
+            >
+          </div>
+        </div>
 
-        <section class="charts-grid">
-            <div class="chart-card">
-                <h3>Temperature Trend</h3>
-                <div class="canvas-container"><canvas id="tempChart"></canvas></div>
-            </div>
-            <div class="chart-card">
-                <h3>Humidity Trend</h3>
-                <div class="canvas-container"><canvas id="humChart"></canvas></div>
-            </div>
-            <div class="chart-card">
-                <h3>CO2 Trend</h3>
-                <div class="canvas-container"><canvas id="co2Chart"></canvas></div>
-            </div>
-            <div class="chart-card">
-                <h3>PM 2.5 Trend</h3>
-                <div class="canvas-container"><canvas id="pm25Chart"></canvas></div>
-            </div>
-        </section>
+        <div class="card glass-element press-card">
+          <h3 data-i18n="press">Pressure</h3>
+          <div class="value"><span id="val-press">--</span> hPa</div>
+          <div class="min-max">
+            <span class="min-val"
+              ><span data-i18n="min">Min</span>: <span id="val-min-press">--</span></span
+            >
+            |
+            <span class="max-val"
+              ><span data-i18n="max">Max</span>: <span id="val-max-press">--</span></span
+            >
+          </div>
+        </div>
+
+        <div class="card glass-element lux-card">
+          <h3 data-i18n="lux">Light (Lux)</h3>
+          <div class="value"><span id="val-lux">--</span> lx</div>
+          <div class="min-max">
+            <span class="min-val"
+              ><span data-i18n="min">Min</span>: <span id="val-min-lux">--</span></span
+            >
+            |
+            <span class="max-val"
+              ><span data-i18n="max">Max</span>: <span id="val-max-lux">--</span></span
+            >
+          </div>
+        </div>
+
+        <div class="card glass-element pm1-card">
+          <div class="card-header">
+            <h3>PM 1.0</h3>
+            <button class="toggle-btn" data-sensor="pm1" data-i18n="showPpm">show ppm</button>
+          </div>
+          <div class="value">
+            <span id="val-pm1">--</span> <span id="unit-pm1" class="unit">µg/m³</span>
+          </div>
+          <div class="min-max">
+            <span class="min-val"
+              ><span data-i18n="min">Min</span>: <span id="val-min-pm1">--</span></span
+            >
+            |
+            <span class="max-val"
+              ><span data-i18n="max">Max</span>: <span id="val-max-pm1">--</span></span
+            >
+          </div>
+        </div>
+
+        <div class="card glass-element pm25-card">
+          <div class="card-header">
+            <h3>PM 2.5</h3>
+            <button class="toggle-btn" data-sensor="pm25" data-i18n="showPpm">show ppm</button>
+          </div>
+          <div class="value">
+            <span id="val-pm25">--</span> <span id="unit-pm25" class="unit">µg/m³</span>
+          </div>
+          <div class="min-max">
+            <span class="min-val"
+              ><span data-i18n="min">Min</span>: <span id="val-min-pm25">--</span></span
+            >
+            |
+            <span class="max-val"
+              ><span data-i18n="max">Max</span>: <span id="val-max-pm25">--</span></span
+            >
+          </div>
+        </div>
+
+        <div class="card glass-element pm10-card">
+          <div class="card-header">
+            <h3>PM 10</h3>
+            <button class="toggle-btn" data-sensor="pm10" data-i18n="showPpm">show ppm</button>
+          </div>
+          <div class="value">
+            <span id="val-pm10">--</span> <span id="unit-pm10" class="unit">µg/m³</span>
+          </div>
+          <div class="min-max">
+            <span class="min-val"
+              ><span data-i18n="min">Min</span>: <span id="val-min-pm10">--</span></span
+            >
+            |
+            <span class="max-val"
+              ><span data-i18n="max">Max</span>: <span id="val-max-pm10">--</span></span
+            >
+          </div>
+        </div>
+
+        <div class="card glass-element co2-card">
+          <h3>CO2</h3>
+          <div class="value"><span id="val-co2">--</span> ppm</div>
+          <div class="min-max">
+            <span class="min-val"
+              ><span data-i18n="min">Min</span>: <span id="val-min-co2">--</span></span
+            >
+            |
+            <span class="max-val"
+              ><span data-i18n="max">Max</span>: <span id="val-max-co2">--</span></span
+            >
+          </div>
+        </div>
+      </section>
+
+      <section class="charts-grid">
+        <div class="chart-card glass-element">
+          <h3 data-i18n="tempTrend">Temperature Trend</h3>
+          <div class="canvas-container"><canvas id="tempChart"></canvas></div>
+        </div>
+        <div class="chart-card glass-element">
+          <h3 data-i18n="humTrend">Humidity Trend</h3>
+          <div class="canvas-container"><canvas id="humChart"></canvas></div>
+        </div>
+        <div class="chart-card glass-element">
+          <h3 data-i18n="co2Trend">CO2 Trend</h3>
+          <div class="canvas-container"><canvas id="co2Chart"></canvas></div>
+        </div>
+        <div class="chart-card glass-element">
+          <h3 data-i18n="pm25Trend">PM 2.5 Trend</h3>
+          <div class="canvas-container"><canvas id="pm25Chart"></canvas></div>
+        </div>
+      </section>
     </div>
 
     <script type="module" src="script.js"></script>
-</body>
+  </body>
 </html>
