@@ -23,7 +23,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
-// --- Expanded Dictionary for Download Feature ---
+// --- Expanded Dictionary for Download Feature with the ⮟ arrow ---
 const translations = {
   en: {
     title: "Lohia Farm Weather Station",
@@ -44,7 +44,7 @@ const translations = {
     chartHum: "Humidity (%)",
     chartCo2: "CO2 (ppm)",
     chartPm25: "PM 2.5 (µg/m³)",
-    downloadData: "Download Data",
+    downloadData: "Download Data ⮟",
     todayData: "Today's Data",
     allData: "All Data",
   },
@@ -67,7 +67,7 @@ const translations = {
     chartHum: "नमी (%)",
     chartCo2: "CO2 (ppm)",
     chartPm25: "PM 2.5 (µg/m³)",
-    downloadData: "डेटा डाउनलोड करें",
+    downloadData: "डेटा डाउनलोड करें ⮟",
     todayData: "आज का डेटा",
     allData: "सभी डेटा",
   },
@@ -90,7 +90,7 @@ const translations = {
     chartHum: "आर्द्रता (%)",
     chartCo2: "CO2 (ppm)",
     chartPm25: "PM 2.5 (µg/m³)",
-    downloadData: "डेटा डाउनलोड करा",
+    downloadData: "डेटा डाउनलोड करा ⮟",
     todayData: "आजचा डेटा",
     allData: "सर्व डेटा",
   },
@@ -160,7 +160,6 @@ const setupLangToggle = () => {
   });
 };
 
-// --- New Feature: Download Data to CSV ---
 const setupDownloadToggle = () => {
   const downloadBtn = document.getElementById("download-toggle");
 
@@ -168,7 +167,6 @@ const setupDownloadToggle = () => {
     const choice = e.target.value;
     if (!choice) return;
 
-    // Briefly change text to show it's loading
     downloadBtn.options[0].text = "Loading...";
 
     try {
@@ -196,7 +194,6 @@ const setupDownloadToggle = () => {
       alert("Failed to fetch data.");
     }
 
-    // Reset the dropdown back to default
     downloadBtn.value = "";
     downloadBtn.options[0].text = translations[currentLang].downloadData;
   });
@@ -221,8 +218,8 @@ const generateCSV = (dataObject, choice) => {
   rows.forEach(row => {
     const dateObj = new Date(row.timestamp);
     const rowData = [
-      dateObj.toLocaleDateString("en-GB"), // DD/MM/YYYY format
-      dateObj.toLocaleTimeString("en-GB"), // 24hr format
+      dateObj.toLocaleDateString("en-GB"),
+      dateObj.toLocaleTimeString("en-GB"),
       row.temperature,
       row.humidity,
       row.pressure,
@@ -235,7 +232,6 @@ const generateCSV = (dataObject, choice) => {
     csvContent += rowData.join(",") + "\n";
   });
 
-  // Create a downloadable file
   const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
   const link = document.createElement("a");
   const filename =
@@ -497,7 +493,7 @@ window.onload = () => {
   initCharts();
   setupThemeToggle();
   setupLangToggle();
-  setupDownloadToggle(); // Added the new setup call here
+  setupDownloadToggle();
   setupToggleButtons();
   fetchDailyMinMax();
   startDataListener();
