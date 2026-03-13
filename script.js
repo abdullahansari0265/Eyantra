@@ -23,7 +23,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
-// --- Expanded Dictionary for Download Feature with the ⮟ arrow ---
+// --- Expanded Dictionary for Download Feature with the ▾ arrow ---
 const translations = {
   en: {
     title: "Lohia Farm Weather Station",
@@ -44,7 +44,7 @@ const translations = {
     chartHum: "Humidity (%)",
     chartCo2: "CO2 (ppm)",
     chartPm25: "PM 2.5 (µg/m³)",
-    downloadData: "Download Data ⮟",
+    downloadData: "Download Data ▾",
     todayData: "Today's Data",
     allData: "All Data",
   },
@@ -67,7 +67,7 @@ const translations = {
     chartHum: "नमी (%)",
     chartCo2: "CO2 (ppm)",
     chartPm25: "PM 2.5 (µg/m³)",
-    downloadData: "डेटा डाउनलोड करें ⮟",
+    downloadData: "डेटा डाउनलोड करें ▾",
     todayData: "आज का डेटा",
     allData: "सभी डेटा",
   },
@@ -90,7 +90,7 @@ const translations = {
     chartHum: "आर्द्रता (%)",
     chartCo2: "CO2 (ppm)",
     chartPm25: "PM 2.5 (µg/m³)",
-    downloadData: "डेटा डाउनलोड करा ⮟",
+    downloadData: "डेटा डाउनलोड करा ▾",
     todayData: "आजचा डेटा",
     allData: "सर्व डेटा",
   },
