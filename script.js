@@ -23,6 +23,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
+// --- Expanded Dictionary for Download Feature ---
 const translations = {
   en: {
     title: "Lohia Farm Weather Station",
@@ -39,6 +40,13 @@ const translations = {
     humTrend: "Humidity Trend",
     co2Trend: "CO2 Trend",
     pm25Trend: "PM 2.5 Trend",
+    chartTemp: "Temperature (°C)",
+    chartHum: "Humidity (%)",
+    chartCo2: "CO2 (ppm)",
+    chartPm25: "PM 2.5 (µg/m³)",
+    downloadData: "Download Data",
+    todayData: "Today's Data",
+    allData: "All Data",
   },
   hi: {
     title: "लोहिया फार्म मौसम केंद्र",
@@ -55,6 +63,13 @@ const translations = {
     humTrend: "नमी प्रवृत्ति",
     co2Trend: "CO2 प्रवृत्ति",
     pm25Trend: "PM 2.5 प्रवृत्ति",
+    chartTemp: "तापमान (°C)",
+    chartHum: "नमी (%)",
+    chartCo2: "CO2 (ppm)",
+    chartPm25: "PM 2.5 (µg/m³)",
+    downloadData: "डेटा डाउनलोड करें",
+    todayData: "आज का डेटा",
+    allData: "सभी डेटा",
   },
   mr: {
     title: "लोहिया फार्म हवामान केंद्र",
@@ -71,11 +86,19 @@ const translations = {
     humTrend: "आर्द्रता कल",
     co2Trend: "CO2 कल",
     pm25Trend: "PM 2.5 कल",
+    chartTemp: "तापमान (°C)",
+    chartHum: "आर्द्रता (%)",
+    chartCo2: "CO2 (ppm)",
+    chartPm25: "PM 2.5 (µg/m³)",
+    downloadData: "डेटा डाउनलोड करा",
+    todayData: "आजचा डेटा",
+    allData: "सर्व डेटा",
   },
 };
 
 let currentLang = "en";
 let currentData = null;
+let historicalData = [];
 
 let tempChart, humChart, co2Chart, pm25Chart;
 let pmUnits = { pm1: "ug", pm25: "ug", pm10: "ug" };
@@ -114,6 +137,14 @@ const updateTextTranslations = () => {
         ? translations[currentLang].showPpm
         : translations[currentLang].showUg;
   });
+
+  if (tempChart) tempChart.data.datasets[0].label = translations[currentLang].chartTemp;
+  if (humChart) humChart.data.datasets[0].label = translations[currentLang].chartHum;
+  if (co2Chart) co2Chart.data.datasets[0].label = translations[currentLang].chartCo2;
+  if (pm25Chart) pm25Chart.data.datasets[0].label = translations[currentLang].chartPm25;
+  [tempChart, humChart, co2Chart, pm25Chart].forEach(chart => {
+    if (chart) chart.update();
+  });
 };
 
 const setupLangToggle = () => {
@@ -125,11 +156,103 @@ const setupLangToggle = () => {
       updateMinMaxUI();
       ["pm1", "pm25", "pm10"].forEach(renderPmCard);
     }
+    refreshCharts();
   });
 };
 
+// --- New Feature: Download Data to CSV ---
+const setupDownloadToggle = () => {
+  const downloadBtn = document.getElementById("download-toggle");
+
+  downloadBtn.addEventListener("change", async e => {
+    const choice = e.target.value;
+    if (!choice) return;
+
+    // Briefly change text to show it's loading
+    downloadBtn.options[0].text = "Loading...";
+
+    try {
+      let dataSnapshot;
+      if (choice === "today") {
+        const startOfDay = new Date();
+        startOfDay.setHours(0, 0, 0, 0);
+        const todayQuery = query(
+          ref(db, "weather"),
+          orderByChild("timestamp"),
+          startAt(startOfDay.getTime())
+        );
+        dataSnapshot = await get(todayQuery);
+      } else if (choice === "all") {
+        dataSnapshot = await get(ref(db, "weather"));
+      }
+
+      if (dataSnapshot && dataSnapshot.exists()) {
+        generateCSV(dataSnapshot.val(), choice);
+      } else {
+        alert("No data found to download.");
+      }
+    } catch (error) {
+      console.error("Download Error:", error);
+      alert("Failed to fetch data.");
+    }
+
+    // Reset the dropdown back to default
+    downloadBtn.value = "";
+    downloadBtn.options[0].text = translations[currentLang].downloadData;
+  });
+};
+
+const generateCSV = (dataObject, choice) => {
+  const rows = Object.values(dataObject);
+  const headers = [
+    "Date",
+    "Time",
+    "Temperature (C)",
+    "Humidity (%)",
+    "Pressure (hPa)",
+    "Light (lux)",
+    "PM 1.0 (ug/m3)",
+    "PM 2.5 (ug/m3)",
+    "PM 10 (ug/m3)",
+    "CO2 (ppm)",
+  ];
+  let csvContent = headers.join(",") + "\n";
+
+  rows.forEach(row => {
+    const dateObj = new Date(row.timestamp);
+    const rowData = [
+      dateObj.toLocaleDateString("en-GB"), // DD/MM/YYYY format
+      dateObj.toLocaleTimeString("en-GB"), // 24hr format
+      row.temperature,
+      row.humidity,
+      row.pressure,
+      row.lux,
+      row.pm1,
+      row.pm25,
+      row.pm10,
+      row.co2,
+    ];
+    csvContent += rowData.join(",") + "\n";
+  });
+
+  // Create a downloadable file
+  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+  const link = document.createElement("a");
+  const filename =
+    choice === "today"
+      ? `Lohia_Farm_Today_${new Date().toLocaleDateString("en-GB").replace(/\//g, "-")}.csv`
+      : `Lohia_Farm_All_Data.csv`;
+
+  link.href = URL.createObjectURL(blob);
+  link.download = filename;
+  link.style.display = "none";
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+};
+
 const initCharts = () => {
-  Chart.defaults.color = "#2e8abbff";// headings of charts
+  Chart.defaults.color = "rgba(255, 255, 255, 0.7)";
   Chart.defaults.borderColor = "rgba(255, 255, 255, 0.1)";
   Chart.defaults.font.family = "'Inter', sans-serif";
 
@@ -154,42 +277,62 @@ const initCharts = () => {
       options: {
         responsive: true,
         maintainAspectRatio: false,
-        scales: { x: { ticks: { maxTicksLimit: 8 } } },
+        scales: {
+          x: { ticks: { maxTicksLimit: 8 } },
+          y: {
+            ticks: {
+              callback: function (value) {
+                return formatNum(value);
+              },
+            },
+          },
+        },
+        plugins: {
+          tooltip: {
+            callbacks: {
+              label: function (context) {
+                return context.dataset.label + ": " + formatNum(context.raw);
+              },
+            },
+          },
+        },
         animation: { duration: 0 },
       },
     });
   };
 
-  tempChart = createChart(document.getElementById("tempChart"), "Temperature (°C)", "#ff8a65");
-  humChart = createChart(document.getElementById("humChart"), "Humidity (%)", "#64b5f6");
-  co2Chart = createChart(document.getElementById("co2Chart"), "CO2 (ppm)", "#ffb74d");
-  pm25Chart = createChart(document.getElementById("pm25Chart"), "PM 2.5 (µg/m³)", "#ba68c8");
+  tempChart = createChart(
+    document.getElementById("tempChart"),
+    translations[currentLang].chartTemp,
+    "#ff8a65"
+  );
+  humChart = createChart(
+    document.getElementById("humChart"),
+    translations[currentLang].chartHum,
+    "#64b5f6"
+  );
+  co2Chart = createChart(
+    document.getElementById("co2Chart"),
+    translations[currentLang].chartCo2,
+    "#ffb74d"
+  );
+  pm25Chart = createChart(
+    document.getElementById("pm25Chart"),
+    translations[currentLang].chartPm25,
+    "#ba68c8"
+  );
 };
 
-
-// updated code for light theme correction in graph
 const setupThemeToggle = () => {
   const themeBtn = document.getElementById("theme-toggle");
-
   themeBtn.addEventListener("click", () => {
     document.body.classList.toggle("light-theme");
     const isLight = document.body.classList.contains("light-theme");
-
     themeBtn.innerText = isLight ? "🌙 Dark" : "☀️ Light";
 
-    const textColor = isLight ? "#1a237e" : "rgba(255,255,255,0.7)";
-    const gridColor = isLight ? "rgba(0,0,0,0.1)" : "rgba(255,255,255,0.1)";
-
-    [tempChart, humChart, co2Chart, pm25Chart].forEach(chart => {
-
-      chart.options.scales.x.ticks.color = textColor;
-      chart.options.scales.y.ticks.color = textColor;
-
-      chart.options.scales.x.grid.color = gridColor;
-      chart.options.scales.y.grid.color = gridColor;
-
-      chart.update();
-    });
+    Chart.defaults.color = isLight ? "rgba(0, 0, 0, 0.6)" : "rgba(255, 255, 255, 0.7)";
+    Chart.defaults.borderColor = isLight ? "rgba(0, 0, 0, 0.1)" : "rgba(255, 255, 255, 0.1)";
+    [tempChart, humChart, co2Chart, pm25Chart].forEach(chart => chart.update());
   });
 };
 
@@ -310,35 +453,42 @@ const updateCharts = (labels, temps, hums, co2s, pm25s) => {
   pm25Chart.update();
 };
 
+const refreshCharts = () => {
+  if (!historicalData.length) return;
+  const labels = [],
+    temps = [],
+    hums = [],
+    co2s = [],
+    pm25s = [];
+  const localeCode = currentLang === "hi" ? "hi-IN" : currentLang === "mr" ? "mr-IN" : "en-US";
+
+  historicalData.forEach(entry => {
+    labels.push(
+      new Intl.DateTimeFormat(localeCode, {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        numberingSystem: currentLang === "en" ? "latn" : "deva",
+      }).format(new Date(entry.timestamp))
+    );
+    temps.push(entry.temperature);
+    hums.push(entry.humidity);
+    co2s.push(entry.co2);
+    pm25s.push(entry.pm25);
+  });
+  updateCharts(labels, temps, hums, co2s, pm25s);
+};
+
 const startDataListener = () => {
   onValue(query(ref(db, "weather"), limitToLast(20)), snapshot => {
     if (snapshot.exists()) {
       const data = snapshot.val();
       const keys = Object.keys(data);
-      updateCards(data[keys[keys.length - 1]]);
 
-      const labels = [],
-        temps = [],
-        hums = [],
-        co2s = [],
-        pm25s = [];
-      const localeCode = currentLang === "hi" ? "hi-IN" : currentLang === "mr" ? "mr-IN" : "en-US";
-      keys.forEach(key => {
-        const entry = data[key];
-        labels.push(
-          new Intl.DateTimeFormat(localeCode, {
-            hour: "2-digit",
-            minute: "2-digit",
-            second: "2-digit",
-            numberingSystem: currentLang === "en" ? "latn" : "deva",
-          }).format(new Date(entry.timestamp))
-        );
-        temps.push(entry.temperature);
-        hums.push(entry.humidity);
-        co2s.push(entry.co2);
-        pm25s.push(entry.pm25);
-      });
-      updateCharts(labels, temps, hums, co2s, pm25s);
+      historicalData = keys.map(key => data[key]);
+
+      updateCards(historicalData[historicalData.length - 1]);
+      refreshCharts();
     }
   });
 };
@@ -347,6 +497,7 @@ window.onload = () => {
   initCharts();
   setupThemeToggle();
   setupLangToggle();
+  setupDownloadToggle(); // Added the new setup call here
   setupToggleButtons();
   fetchDailyMinMax();
   startDataListener();
