@@ -8,6 +8,7 @@ import {
   get,
   orderByChild,
   startAt,
+  endAt,
 } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
 
 const firebaseConfig = {
@@ -23,7 +24,6 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
-// --- Expanded Dictionary for Download Feature with the ▾ arrow ---
 const translations = {
   en: {
     title: "Lohia Farm Weather Station",
@@ -47,6 +47,7 @@ const translations = {
     downloadData: "Download Data ▾",
     todayData: "Today's Data",
     allData: "All Data",
+    customData: "Custom Date",
   },
   hi: {
     title: "लोहिया फार्म मौसम केंद्र",
@@ -70,6 +71,7 @@ const translations = {
     downloadData: "डेटा डाउनलोड करें ▾",
     todayData: "आज का डेटा",
     allData: "सभी डेटा",
+    customData: "कस्टम तिथि",
   },
   mr: {
     title: "लोहिया फार्म हवामान केंद्र",
@@ -93,6 +95,7 @@ const translations = {
     downloadData: "डेटा डाउनलोड करा ▾",
     todayData: "आजचा डेटा",
     allData: "सर्व डेटा",
+    customData: "सानुकूल तारीख",
   },
 };
 
@@ -160,46 +163,89 @@ const setupLangToggle = () => {
   });
 };
 
+const getLocalYYYYMMDD = dateObj => {
+  const year = dateObj.getFullYear();
+  const month = String(dateObj.getMonth() + 1).padStart(2, "0");
+  const day = String(dateObj.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
 const setupDownloadToggle = () => {
   const downloadBtn = document.getElementById("download-toggle");
+  const datePicker = document.getElementById("custom-date-picker");
+
+  datePicker.max = getLocalYYYYMMDD(new Date());
 
   downloadBtn.addEventListener("change", async e => {
     const choice = e.target.value;
     if (!choice) return;
 
+    if (choice === "custom") {
+      try {
+        datePicker.showPicker();
+      } catch (err) {
+        datePicker.focus();
+        datePicker.click();
+      }
+      return;
+    }
+    await executeDownload(choice);
+  });
+
+  datePicker.addEventListener("change", async e => {
+    if (!e.target.value) {
+      resetDownloadDropdown();
+      return;
+    }
+    await executeDownload("custom", e.target.value);
+  });
+
+  const resetDownloadDropdown = () => {
+    downloadBtn.value = "";
+    downloadBtn.options[0].text = translations[currentLang].downloadData;
+  };
+
+  const executeDownload = async (choice, selectedDateString = null) => {
     downloadBtn.options[0].text = "Loading...";
 
     try {
       let dataSnapshot;
       if (choice === "today") {
-        const startOfDay = new Date();
-        startOfDay.setHours(0, 0, 0, 0);
+        const todayStr = getLocalYYYYMMDD(new Date());
         const todayQuery = query(
           ref(db, "weather"),
           orderByChild("timestamp"),
-          startAt(startOfDay.getTime())
+          startAt(`${todayStr}T00:00:00`),
+          endAt(`${todayStr}T23:59:59`)
         );
         dataSnapshot = await get(todayQuery);
       } else if (choice === "all") {
         dataSnapshot = await get(ref(db, "weather"));
+      } else if (choice === "custom" && selectedDateString) {
+        const customQuery = query(
+          ref(db, "weather"),
+          orderByChild("timestamp"),
+          startAt(`${selectedDateString}T00:00:00`),
+          endAt(`${selectedDateString}T23:59:59`)
+        );
+        dataSnapshot = await get(customQuery);
       }
 
       if (dataSnapshot && dataSnapshot.exists()) {
-        generateCSV(dataSnapshot.val(), choice);
+        generateCSV(dataSnapshot.val(), choice, selectedDateString);
       } else {
-        alert("No data found to download.");
+        alert("No data found for this selection.");
       }
     } catch (error) {
       console.error("Download Error:", error);
-      alert("Failed to fetch data.");
+      alert("Failed to fetch data. Check your console logs.");
     }
 
-    downloadBtn.value = "";
-    downloadBtn.options[0].text = translations[currentLang].downloadData;
-  });
+    resetDownloadDropdown();
+  };
 };
 
-const generateCSV = (dataObject, choice) => {
+const generateCSV = (dataObject, choice, selectedDateString = null) => {
   const rows = Object.values(dataObject);
   const headers = [
     "Date",
@@ -216,10 +262,33 @@ const generateCSV = (dataObject, choice) => {
   let csvContent = headers.join(",") + "\n";
 
   rows.forEach(row => {
-    const dateObj = new Date(row.timestamp);
+    let dateStr = "N/A";
+    let timeStr = "N/A";
+
+    // Completely bypassing new Date() for the CSV generation to stop "Invalid Date" errors
+    if (typeof row.timestamp === "string") {
+      const parts = row.timestamp.replace("Z", "").split("T");
+      if (parts.length === 2) {
+        // Convert YYYY-MM-DD to DD/MM/YYYY for Excel
+        const dParts = parts[0].split("-");
+        if (dParts.length === 3) {
+          dateStr = `${dParts[2]}/${dParts[1]}/${dParts[0]}`;
+        } else {
+          dateStr = parts[0];
+        }
+        timeStr = parts[1];
+      } else {
+        dateStr = row.timestamp; // Fallback just in case
+      }
+    } else if (typeof row.timestamp === "number") {
+      const d = new Date(row.timestamp);
+      dateStr = d.toLocaleDateString("en-GB");
+      timeStr = d.toLocaleTimeString("en-GB");
+    }
+
     const rowData = [
-      dateObj.toLocaleDateString("en-GB"),
-      dateObj.toLocaleTimeString("en-GB"),
+      dateStr,
+      timeStr,
       row.temperature,
       row.humidity,
       row.pressure,
@@ -234,10 +303,13 @@ const generateCSV = (dataObject, choice) => {
 
   const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
   const link = document.createElement("a");
-  const filename =
-    choice === "today"
-      ? `Lohia_Farm_Today_${new Date().toLocaleDateString("en-GB").replace(/\//g, "-")}.csv`
-      : `Lohia_Farm_All_Data.csv`;
+
+  let filename = `Lohia_Farm_All_Data.csv`;
+  if (choice === "today") {
+    filename = `Lohia_Farm_Today_${new Date().toLocaleDateString("en-GB").replace(/\//g, "-")}.csv`;
+  } else if (choice === "custom" && selectedDateString) {
+    filename = `Lohia_Farm_${selectedDateString}.csv`;
+  }
 
   link.href = URL.createObjectURL(blob);
   link.download = filename;
@@ -248,7 +320,7 @@ const generateCSV = (dataObject, choice) => {
 };
 
 const initCharts = () => {
-  Chart.defaults.color = "#18207cff"; // headings of charts
+  Chart.defaults.color = "#18207cff";
   Chart.defaults.borderColor = "rgba(255, 255, 255, 0.1)";
   Chart.defaults.font.family = "'Inter', sans-serif";
 
@@ -326,7 +398,7 @@ const setupThemeToggle = () => {
     const isLight = document.body.classList.contains("light-theme");
     themeBtn.innerText = isLight ? "🌙 Dark" : "☀️ Light";
 
-    Chart.defaults.color = isLight ? "rgba(0, 0, 0, 0.6)" : "rgba(255, 255, 255, 0.7)";
+    Chart.defaults.color = isLight ? "rgba(0, 0, 0, 0.6)" : "#18207cff";
     Chart.defaults.borderColor = isLight ? "rgba(0, 0, 0, 0.1)" : "rgba(255, 255, 255, 0.1)";
     [tempChart, humChart, co2Chart, pm25Chart].forEach(chart => chart.update());
   });
@@ -369,13 +441,15 @@ const renderPmCard = sensor => {
 };
 
 const fetchDailyMinMax = async () => {
-  const startOfDay = new Date();
-  startOfDay.setHours(0, 0, 0, 0);
+  const todayStr = getLocalYYYYMMDD(new Date());
+
   const todayQuery = query(
     ref(db, "weather"),
     orderByChild("timestamp"),
-    startAt(startOfDay.getTime())
+    startAt(`${todayStr}T00:00:00`),
+    endAt(`${todayStr}T23:59:59`)
   );
+
   try {
     const snapshot = await get(todayQuery);
     if (snapshot.exists()) {
@@ -425,13 +499,14 @@ const updateCards = data => {
   renderPmCard("pm25");
   renderPmCard("pm10");
 
-  const date = new Date(data.timestamp);
+  let dateObj = new Date(data.timestamp); // Modern standard parsing
+
   const localeCode = currentLang === "hi" ? "hi-IN" : currentLang === "mr" ? "mr-IN" : "en-US";
   document.getElementById("timestamp").innerText = new Intl.DateTimeFormat(localeCode, {
     dateStyle: "short",
     timeStyle: "medium",
     numberingSystem: currentLang === "en" ? "latn" : "deva",
-  }).format(date);
+  }).format(dateObj);
 };
 
 const updateCharts = (labels, temps, hums, co2s, pm25s) => {
@@ -459,13 +534,15 @@ const refreshCharts = () => {
   const localeCode = currentLang === "hi" ? "hi-IN" : currentLang === "mr" ? "mr-IN" : "en-US";
 
   historicalData.forEach(entry => {
+    let dateObj = new Date(entry.timestamp);
+
     labels.push(
       new Intl.DateTimeFormat(localeCode, {
         hour: "2-digit",
         minute: "2-digit",
         second: "2-digit",
         numberingSystem: currentLang === "en" ? "latn" : "deva",
-      }).format(new Date(entry.timestamp))
+      }).format(dateObj)
     );
     temps.push(entry.temperature);
     hums.push(entry.humidity);
