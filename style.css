@@ -288,8 +288,10 @@ header h1 {
 /* Charts Section */
 .charts-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-  gap: 24px;
+  /* Use 280px as the minimum so it fits even the smallest phones */
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
+  width: 100%;
 }
 
 .chart-card {
@@ -312,31 +314,28 @@ header h1 {
 }
 
 @media (max-width: 768px) {
-  .header-top {
-    flex-direction: column;
-    gap: 15px;
+  body {
+    padding: 12px; /* Small consistent padding for the whole screen */
   }
-  .header-controls {
-    width: 100%;
-    justify-content: space-between;
-  }
-  header h1 {
-    font-size: 1.6rem;
-    text-align: center;
-  }
-  .cards-grid {
-    grid-template-columns: 1fr;
-    gap: 15px;
-  }
+
+  /* Force both grids to behave identically */
+  .cards-grid, 
   .charts-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr !important; /* One column only */
+    gap: 16px;
   }
+
+  .card, .chart-card {
+    width: 100% !important; /* Stretch to the edges of the grid */
+    margin: 0; 
+    box-sizing: border-box; /* Crucial: includes padding inside the 100% width */
+    padding: 16px;
+  }
+
+  /* Make the chart height smaller so it doesn't take the whole screen */
   .canvas-container {
-    height: 250px;
-  }
-  .farm-bg {
-    width: 100vw;
-    height: 100vh;
-    filter: blur(40px);
+    height: 220px; /* Reduced for better mobile proportion */
+    width: 100% !important;
+    position: relative;
   }
 }

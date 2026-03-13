@@ -129,7 +129,7 @@ const setupLangToggle = () => {
 };
 
 const initCharts = () => {
-  Chart.defaults.color = "#18207cff";// headings of charts
+  Chart.defaults.color = "#2e8abbff";// headings of charts
   Chart.defaults.borderColor = "rgba(255, 255, 255, 0.1)";
   Chart.defaults.font.family = "'Inter', sans-serif";
 
