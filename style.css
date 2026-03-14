@@ -306,6 +306,7 @@ header h1 {
 /* Charts Section */
 .charts-grid {
   display: grid;
+   /* Use 280px as the minimum so it fits even the smallest phones */
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 20px;
   width: 100%;

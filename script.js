@@ -320,7 +320,7 @@ const generateCSV = (dataObject, choice, selectedDateString = null) => {
 };
 
 const initCharts = () => {
-  Chart.defaults.color = "#18207cff";
+  Chart.defaults.color = "#808080";
   Chart.defaults.borderColor = "rgba(255, 255, 255, 0.1)";
   Chart.defaults.font.family = "'Inter', sans-serif";
 
@@ -398,7 +398,7 @@ const setupThemeToggle = () => {
     const isLight = document.body.classList.contains("light-theme");
     themeBtn.innerText = isLight ? "🌙 Dark" : "☀️ Light";
 
-    Chart.defaults.color = isLight ? "rgba(0, 0, 0, 0.6)" : "#18207cff";
+    Chart.defaults.color = isLight ? "rgba(0, 0, 0, 0.6)" : "#808080";//color for
     Chart.defaults.borderColor = isLight ? "rgba(0, 0, 0, 0.1)" : "rgba(255, 255, 255, 0.1)";
     [tempChart, humChart, co2Chart, pm25Chart].forEach(chart => chart.update());
   });
