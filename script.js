@@ -116,6 +116,8 @@ let dailyStats = {
   pm25: { min: Infinity, max: -Infinity, id: "pm25" },
   pm10: { min: Infinity, max: -Infinity, id: "pm10" },
   co2: { min: Infinity, max: -Infinity, id: "co2" },
+  heat: { min: Infinity, max: -Infinity, id: "heat" },
+  dew: { min: Infinity, max: -Infinity, id: "dew" }
 };
 
 const formatNum = (num, maxDecimals = 1) => {
@@ -471,7 +473,7 @@ const fetchDailyMinMax = async () => {
 };
 
 const updateMinMaxUI = () => {
-  ["temperature", "humidity", "pressure", "lux", "co2"].forEach(key => {
+  ["temperature", "humidity", "pressure", "lux", "co2","dew", "heat"].forEach(key => {
     const stat = dailyStats[key];
     if (stat.min !== Infinity)
       document.getElementById(`val-min-${stat.id}`).innerText = formatNum(stat.min);
@@ -484,6 +486,58 @@ const updateCards = data => {
   currentData = data;
   document.getElementById("val-temp").innerText = formatNum(data.temperature);
   document.getElementById("val-hum").innerText = formatNum(data.humidity);
+  
+  
+  // --- 1. Accurate Dew Point (Sonntag Constants) ---
+  const a = 17.625;
+  const b = 243.04;
+  const alpha = Math.log(data.humidity / 100.0) + (a * data.temperature) / (b + data.temperature);
+  const dewPoint = (b * alpha) / (a - alpha);
+  document.getElementById("val-dew").innerText = formatNum(dewPoint);
+
+  // Update min/max for dew point
+  if (dewPoint < dailyStats.dew.min) dailyStats.dew.min = dewPoint;
+  if (dewPoint > dailyStats.dew.max) dailyStats.dew.max = dewPoint;
+
+  document.getElementById("val-min-dew").innerText = formatNum(dailyStats.dew.min);
+ document.getElementById("val-max-dew").innerText = formatNum(dailyStats.dew.max);
+
+  // --- 2. Accurate Heat Index (NWS/NOAA Consistent Logic) ---
+  let hi_f; // Working variable in Fahrenheit
+  const T_c = data.temperature;
+  const RH = data.humidity;
+  const T_f = (T_c * 9/5) + 32;
+
+  // 1. Calculate Initial Simple Heat Index (Steadman's)
+  hi_f = 0.5 * (T_f + 61.0 + ((T_f - 68.0) * 1.2) + (RH * 0.094));
+
+  // 2. If the simple HI is 80°F or higher, use the full Rothfusz Regression
+  if (hi_f >= 80) {
+    hi_f = -42.379 + 2.04901523 * T_f + 10.14333127 * RH 
+           - 0.22475541 * T_f * RH - 0.00683783 * T_f * T_f 
+           - 0.05481717 * RH * RH + 0.00122874 * T_f * T_f * RH 
+           + 0.00085282 * T_f * RH * RH - 0.00000199 * T_f * T_f * RH * RH;
+
+    // Adjustments
+    if (RH < 13 && T_f >= 80 && T_f <= 112) {
+      hi_f -= ((13 - RH) / 4) * Math.sqrt((17 - Math.abs(T_f - 95)) / 17);
+    } else if (RH > 85 && T_f >= 80 && T_f <= 87) {
+      hi_f += ((RH - 85) / 10) * ((87 - T_f) / 5);
+    }
+  }
+
+  // 3. Convert final Fahrenheit result back to Celsius
+  const hi_final_c = (hi_f - 32) * 5/9;
+  
+  document.getElementById("val-heat").innerText = formatNum(hi_final_c);
+
+  // Update min/max (using the new consistent variable)
+  if (hi_final_c < dailyStats.heat.min) dailyStats.heat.min = hi_final_c;
+  if (hi_final_c > dailyStats.heat.max) dailyStats.heat.max = hi_final_c;
+  document.getElementById("val-min-heat").innerText = formatNum(dailyStats.heat.min);
+  document.getElementById("val-max-heat").innerText = formatNum(dailyStats.heat.max);
+
+  
   document.getElementById("val-press").innerText = formatNum(data.pressure);
   document.getElementById("val-lux").innerText = formatNum(data.lux);
   document.getElementById("val-co2").innerText = formatNum(data.co2);

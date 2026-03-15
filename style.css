@@ -302,6 +302,12 @@ header h1 {
 .co2-card {
   border-left-color: var(--accent-co2);
 }
+.dew-card {
+  border-left-color: #30a8b8;
+}
+.heat-card {
+  border-left-color: #e05930;
+}
 
 /* Charts Section */
 .charts-grid {
