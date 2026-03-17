@@ -120,27 +120,16 @@ let dailyStats = {
   dew: { min: Infinity, max: -Infinity, id: "dew" }
 };
 
-
-  const formatNum = (num, maxDecimals = 1) => {
-  // 1. Handle CO2 Warmup signal from ESP32
-  if (num === "w") {
-    if (currentLang === "hi") return "वार्मअप हो रहा है...";
-    if (currentLang === "mr") return "वार्मअप होत आहे...";
-    return "Warming Up...";
-  }
-
+const formatNum = (num, maxDecimals = 1) => {
   if (num === "--" || num === Infinity || num === -Infinity) return "--";
-  
   let localeCode = "en-US";
   if (currentLang === "hi") localeCode = "hi-IN";
   if (currentLang === "mr") localeCode = "mr-IN";
-  
   return new Intl.NumberFormat(localeCode, {
     numberingSystem: currentLang === "en" ? "latn" : "deva",
     maximumFractionDigits: Number.isInteger(num) ? 0 : maxDecimals,
   }).format(num);
 };
-
 
 const updateTextTranslations = () => {
   document.querySelectorAll("[data-i18n]").forEach(el => {
@@ -500,105 +489,63 @@ const updateCards = data => {
   
   
   // --- 1. Accurate Dew Point (Sonntag Constants) ---
- let dewDisplay = "--";
+  const a = 17.625;
+  const b = 243.04;
+  const alpha = Math.log(data.humidity / 100.0) + (a * data.temperature) / (b + data.temperature);
+  const dewPoint = (b * alpha) / (a - alpha);
+  document.getElementById("val-dew").innerText = formatNum(dewPoint);
 
-  // Only calculate if humidity is above 0 
-  if (data.humidity > 0) {
-    const alpha = Math.log(data.humidity / 100.0) + (a * data.temperature) / (b + data.temperature);
-    const dewPoint = (b * alpha) / (a - alpha);
-    dewDisplay = formatNum(dewPoint);
+  // Update min/max for dew point
+  if (dewPoint < dailyStats.dew.min) dailyStats.dew.min = dewPoint;
+  if (dewPoint > dailyStats.dew.max) dailyStats.dew.max = dewPoint;
 
-    // Update stats
-    if (dewPoint < dailyStats.dew.min) dailyStats.dew.min = dewPoint;
-    if (dewPoint > dailyStats.dew.max) dailyStats.dew.max = dewPoint;
-  }
-  
-  document.getElementById("val-dew").innerText = dewDisplay;
   document.getElementById("val-min-dew").innerText = formatNum(dailyStats.dew.min);
-  document.getElementById("val-max-dew").innerText = formatNum(dailyStats.dew.max);
+ document.getElementById("val-max-dew").innerText = formatNum(dailyStats.dew.max);
+
   // --- 2. Accurate Heat Index (NWS/NOAA Consistent Logic) ---
-  // --- 2. Accurate Heat Index (Preventing Negatives) ---
+  let hi_f; // Working variable in Fahrenheit
+  const T_c = data.temperature;
+  const RH = data.humidity;
+  const T_f = (T_c * 9/5) + 32;
 
-// Guard against missing or invalid sensor data
-const T_c = data.temperature;
-const RH = data.humidity;
+  // 1. Calculate Initial Simple Heat Index (Steadman's)
+  hi_f = 0.5 * (T_f + 61.0 + ((T_f - 68.0) * 1.2) + (RH * 0.094));
 
-if (T_c == null || RH == null || isNaN(T_c) || isNaN(RH)) {
-  document.getElementById("val-heat").innerText = "N/A";
-  document.getElementById("val-min-heat").innerText = formatNum(dailyStats.heat.min);
-  document.getElementById("val-max-heat").innerText = formatNum(dailyStats.heat.max);
-  return;
-}
+  // 2. If the simple HI is 80°F or higher, use the full Rothfusz Regression
+  if (hi_f >= 80) {
+    hi_f = -42.379 + 2.04901523 * T_f + 10.14333127 * RH 
+           - 0.22475541 * T_f * RH - 0.00683783 * T_f * T_f 
+           - 0.05481717 * RH * RH + 0.00122874 * T_f * T_f * RH 
+           + 0.00085282 * T_f * RH * RH - 0.00000199 * T_f * T_f * RH * RH;
 
-// Ensure min/max are properly initialized (should be set once at startup)
-if (dailyStats.heat.min === undefined || dailyStats.heat.min === null) dailyStats.heat.min = Infinity;
-if (dailyStats.heat.max === undefined || dailyStats.heat.max === null) dailyStats.heat.max = -Infinity;
-
-let hi_display = "--"; // Default for cold/out-of-range temps
-const T_f = (T_c * 9 / 5) + 32;
-
-// Heat Index is only meaningful at or above 20°C (68°F)
-if (T_c >= 20) {
-  // Step 1: Simple Steadman average formula to determine which equation to use
-  const hi_simple = 0.5 * (T_f + 61.0 + ((T_f - 68.0) * 1.2) + (RH * 0.094));
-
-  let hi_f;
-
-  if (hi_simple >= 80) {
-    // Step 2: Full Rothfuss (NWS) regression equation
-    hi_f =
-      -42.379
-      + 2.04901523  * T_f
-      + 10.14333127 * RH
-      - 0.22475541  * T_f * RH
-      - 0.00683783  * T_f * T_f
-      - 0.05481717  * RH * RH
-      + 0.00122874  * T_f * T_f * RH
-      + 0.00085282  * T_f * RH * RH
-      - 0.00000199  * T_f * T_f * RH * RH;
-
-    // Adjustment for low humidity (dry air feels cooler)
+    // Adjustments
     if (RH < 13 && T_f >= 80 && T_f <= 112) {
       hi_f -= ((13 - RH) / 4) * Math.sqrt((17 - Math.abs(T_f - 95)) / 17);
-    }
-    // Adjustment for high humidity in a narrow temp band
-    else if (RH > 85 && T_f >= 80 && T_f <= 87) {
+    } else if (RH > 85 && T_f >= 80 && T_f <= 87) {
       hi_f += ((RH - 85) / 10) * ((87 - T_f) / 5);
     }
-  } else {
-    // Simple formula result is sufficient for lower heat conditions
-    hi_f = hi_simple;
   }
 
-  const hi_final_c = (hi_f - 32) * 5 / 9;
+  // 3. Convert final Fahrenheit result back to Celsius
+  const hi_final_c = (hi_f - 32) * 5/9;
+  
+  document.getElementById("val-heat").innerText = formatNum(hi_final_c);
 
-  // Sanity check: heat index should not be unreasonably extreme
-  if (!isNaN(hi_final_c) && isFinite(hi_final_c)) {
-    hi_display = formatNum(hi_final_c);
+  // Update min/max (using the new consistent variable)
+  if (hi_final_c < dailyStats.heat.min) dailyStats.heat.min = hi_final_c;
+  if (hi_final_c > dailyStats.heat.max) dailyStats.heat.max = hi_final_c;
+  document.getElementById("val-min-heat").innerText = formatNum(dailyStats.heat.min);
+  document.getElementById("val-max-heat").innerText = formatNum(dailyStats.heat.max);
 
-    // Update daily stats only within valid range
-    if (hi_final_c < dailyStats.heat.min) dailyStats.heat.min = hi_final_c;
-    if (hi_final_c > dailyStats.heat.max) dailyStats.heat.max = hi_final_c;
-  }
-}
-
-// Render to DOM
-document.getElementById("val-heat").innerText = hi_display;
-document.getElementById("val-min-heat").innerText = 
-  isFinite(dailyStats.heat.min) ? formatNum(dailyStats.heat.min) : "—";
-document.getElementById("val-max-heat").innerText = 
-  isFinite(dailyStats.heat.max) ? formatNum(dailyStats.heat.max) : "—";
   
   document.getElementById("val-press").innerText = formatNum(data.pressure);
   document.getElementById("val-lux").innerText = formatNum(data.lux);
   document.getElementById("val-co2").innerText = formatNum(data.co2);
 
   Object.keys(dailyStats).forEach(key => {
-    const val = data[key];
-    // Only update stats if value is a valid number (ignores "w")
-    if (typeof val === 'number' && !isNaN(val)) {
-      if (val < dailyStats[key].min) dailyStats[key].min = val;
-      if (val > dailyStats[key].max) dailyStats[key].max = val;
+    if (data[key] !== undefined) {
+      if (data[key] < dailyStats[key].min) dailyStats[key].min = data[key];
+      if (data[key] > dailyStats[key].max) dailyStats[key].max = data[key];
     }
   });
   updateMinMaxUI();
